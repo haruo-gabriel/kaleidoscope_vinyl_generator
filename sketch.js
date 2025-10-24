@@ -327,7 +327,7 @@ function setup() {
 
 	// Create the symmetry slider
 	// (Min 2, Max 24, Default 'symmetry' value (12), Step 1)
-	symmetrySlider = createSlider(2, 24, symmetry, 1);
+	symmetrySlider = createSlider(2, 32, symmetry, 1);
 	symmetrySlider.parent(sliderDiv);
 	symmetrySlider.style("margin", "0 10px"); // Add horizontal spacing
 
@@ -350,7 +350,7 @@ function setup() {
 	colorLabel.parent(colorDiv);
 
 	// Min 0, Max 0.2, default 0.01, step 0.005
-	colorRateSlider = createSlider(0, 0.2, 0.01, 0.005);
+	colorRateSlider = createSlider(0, 0.9, 0.01, 0.005);
 	colorRateSlider.parent(colorDiv);
 	colorRateSlider.style("margin", "0 10px");
 
@@ -358,6 +358,7 @@ function setup() {
 	colorRateValueSpan.parent(colorDiv);
 
 	colorRateSlider.input(() => {
+
 		colorRateValueSpan.html(nf(colorRateSlider.value(), 0, 3));
 	});
 
@@ -391,8 +392,9 @@ function setup() {
 	let speedLabel = createSpan("Draw speed: ");
 	speedLabel.parent(speedDiv);
 
-	// Min 0 (paused via pause button), Max 1.0, default 0.01, step 0.005
-	drawSpeedSlider = createSlider(0, 1.0, 0.01, 0.005);
+	// Min 0 (paused via pause button), Max 10.0 (faster), default 0.01, step 0.005
+	// Note: default remains small so auto-draw is smooth; users can increase up to 10 for faster motion
+	drawSpeedSlider = createSlider(0, 10.0, 5, 0.005);
 	drawSpeedSlider.parent(speedDiv);
 	drawSpeedSlider.style("margin", "0 10px");
 
