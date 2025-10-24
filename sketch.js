@@ -13,6 +13,8 @@ let autoPaused = false;
 
 // Global canvas size (accessible anywhere)
 let w = 1000;
+let vinylSlider;
+let vinylValueSpan;
 
 // --- Global Color Palette ---
 let hexPalette = [
@@ -381,10 +383,33 @@ function setup() {
 	createCanvas(w, w);
 	angleMode(DEGREES);
 
-	// Use a single vinyl diameter for layout and derive drawRadius from it
-	vinylDiscDiameter = width * 0.85; // 85% of canvas width
+	// --- Vinyl Size Slider ---
+	let vinylDiv = createDiv();
+	vinylDiv.style("margin-top", "8px");
+	vinylDiv.style("display", "flex");
+	vinylDiv.style("align-items", "center");
 
-	// Set the drawing radius to half the vinyl disc so wave radii scale with it
+	let vinylLabel = createSpan("Vinyl size: ");
+	vinylLabel.parent(vinylDiv);
+
+	// Range 0.5 to 1.0 (percentage of canvas), default 0.85
+	vinylSlider = createSlider(0.5, 1.0, 0.85, 0.01);
+	vinylSlider.parent(vinylDiv);
+	vinylSlider.style("margin", "0 10px");
+
+	vinylValueSpan = createSpan(nf(vinylSlider.value(), 0, 2));
+	vinylValueSpan.parent(vinylDiv);
+
+	vinylSlider.input(() => {
+		vinylValueSpan.html(nf(vinylSlider.value(), 0, 2));
+		// Update diameters and drawRadius live
+		vinylDiscDiameter = vinylSlider.value() * width;
+		drawRadius = vinylDiscDiameter / 2;
+		clearCanvas();
+	});
+
+	// Initialize vinyl diameter and drawRadius from slider default
+	vinylDiscDiameter = vinylSlider.value() * width;
 	drawRadius = vinylDiscDiameter / 2;
 
 	// Set colorMode to HSB for the procedural drawer's smooth colors
