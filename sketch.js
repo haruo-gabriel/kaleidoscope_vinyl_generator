@@ -12,8 +12,13 @@ let strokeWeightSlider; // Slider to control stroke weight
 let autoPauseButton;
 let autoPaused = false;
 
+// High-resolution canvas configuration
+const INTERNAL_CANVAS_SIZE = 4000; // Internal resolution for high-quality export
+const DISPLAY_SIZE = 900; // Display size in pixels (will be scaled via CSS)
+let canvasScale; // Multiplier to convert display coordinates to internal coordinates
+
 // Global canvas size (accessible anywhere)
-let w = 1000;
+let w = DISPLAY_SIZE; // Display width/height
 let vinylSlider;
 let vinylValueSpan;
 
@@ -30,10 +35,11 @@ let hexPalette = [
 /**
  * Class: VinylBackground
  * Encapsulates the background and vinyl disc rendering.
+ * Handles high-resolution canvas (internal) vs display size properly.
  */
 class VinylBackground {
 	constructor(vinylSizeRatio = 0.85, bgColor = undefined, discColor = 50) {
-		this.vinylSizeRatio = vinylSizeRatio; // Size as ratio of canvas width (0-1)
+		this.vinylSizeRatio = vinylSizeRatio; // Size as ratio of display width (0-1)
 		// If bgColor not provided, choose a random color from global palette
 		if (bgColor !== undefined) {
 			this.bgColor = bgColor;
@@ -43,15 +49,19 @@ class VinylBackground {
 			this.bgColor = color(hex);
 		}
 		this.discColor = discColor; // Vinyl disc color
-		this.canvasWidth = width; // Store canvas dimensions
 		this.updateSizes();
 	}
 
-	// Update computed sizes based on current canvas width and ratio
+	// Update computed sizes based on current display size and ratio
+	// All sizes are calculated in internal canvas coordinates
 	updateSizes() {
-		this.canvasWidth = width;
-		this.vinylDiscDiameter = this.vinylSizeRatio * this.canvasWidth;
+		// Calculate displayed vinyl diameter based on display size (w = DISPLAY_SIZE)
+		let displayedVinylDiameter = this.vinylSizeRatio * w;
+		// Convert to internal canvas coordinates
+		this.vinylDiscDiameter = displayedVinylDiameter * canvasScale;
 		this.drawRadius = this.vinylDiscDiameter / 2;
+		// Internal canvas dimensions
+		this.canvasWidth = INTERNAL_CANVAS_SIZE;
 	}
 
 	// Set the vinyl size ratio (0-1) and update computed sizes
@@ -108,18 +118,25 @@ class MouseDrawer {
 	// We'll call this from the main draw() loop
 	draw() {
 		// Only draw if the mouse is pressed and inside the canvas
+		// Note: mouseX/mouseY are in display coordinates, but width/height are internal
+		// so we scale mouse coords to internal coordinates for proper comparison
+		let scaledMouseX = mouseX * canvasScale;
+		let scaledMouseY = mouseY * canvasScale;
+		let scaledPMouseX = pmouseX * canvasScale;
+		let scaledPMouseY = pmouseY * canvasScale;
+		
 		if (
 			mouseIsPressed === true &&
 			mouseX > 0 &&
-			mouseX < width &&
+			mouseX < DISPLAY_SIZE &&
 			mouseY > 0 &&
-			mouseY < height
+			mouseY < DISPLAY_SIZE
 		) {
-			// Get mouse coordinates relative to the center
-			let lineStartX = mouseX - width / 2;
-			let lineStartY = mouseY - height / 2;
-			let lineEndX = pmouseX - width / 2;
-			let lineEndY = pmouseY - height / 2;
+			// Get mouse coordinates relative to the center (using scaled coords)
+			let lineStartX = scaledMouseX - width / 2;
+			let lineStartY = scaledMouseY - height / 2;
+			let lineEndX = scaledPMouseX - width / 2;
+			let lineEndY = scaledPMouseY - height / 2;
 
 			// --- Calculate the interpolated color ---
 			// Increment our interpolation value
@@ -256,11 +273,11 @@ class SinusoidalDrawer extends ProceduralDrawer {
 		// Always use default waves
 		this.xWaves = this._createWavesFromConfig([
 			{ radius: drawRadius * 1.0, freq: 10.0, phaseInc: 0.1, mode: "sin" },
-			// { radius: drawRadius * 0.4, freq: 10.0, mode: "sin" },
+			{ radius: drawRadius * 0.4, freq: 5.0, mode: "sin" },
 		]);
 		this.yWaves = this._createWavesFromConfig([
-			// { radius: drawRadius * 0.4, freq: 10.0, mode: "cos" },
-			// { radius: drawRadius * 0.4, freq: 10.0, mode: "cos" },
+			{ radius: drawRadius * 0.4, freq: 6.0, mode: "cos" },
+			{ radius: drawRadius * 0.4, freq: 1.0, mode: "cos" },
 		]);
 
 		// --- Color Palette Logic ---
@@ -388,6 +405,12 @@ function setup() {
 	let btnClear = createButton("Clear");
 	btnClear.mousePressed(clearCanvas);
 
+	// Create Save button for high-resolution export
+	let btnSave = createButton("Save (4000x4000)");
+	btnSave.mousePressed(() => {
+		save('kaleidoscope-4000x4000.png');
+	});
+
 	// --- Create Slider with Label and Value ---
 	// Create a container div for the slider UI
 	let sliderDiv = createDiv();
@@ -445,7 +468,7 @@ function setup() {
 	swLabel.parent(swDiv);
 
 	// Range 0.1 to 10.0, default 3, step 0.1
-	strokeWeightSlider = createSlider(0.1, 30.0, 3, 0.1);
+	strokeWeightSlider = createSlider(6.0, 30.0, 12.0, 0.1);
 	strokeWeightSlider.parent(swDiv);
 	strokeWeightSlider.style("margin", "0 10px");
 
@@ -479,7 +502,24 @@ function setup() {
 	});
 	// --- End Slider UI ---
 
-	createCanvas(w, w);
+	// Create high-resolution canvas (4000x4000 internal resolution)
+	let cnv = createCanvas(INTERNAL_CANVAS_SIZE, INTERNAL_CANVAS_SIZE);
+	canvasScale = INTERNAL_CANVAS_SIZE / DISPLAY_SIZE; // Calculate scaling factor
+	
+	// Scale down canvas display via CSS transform to show at 900x900
+	// Using transform-origin to scale from top-left corner
+	cnv.style('width', INTERNAL_CANVAS_SIZE + 'px');
+	cnv.style('height', INTERNAL_CANVAS_SIZE + 'px');
+	cnv.style('transform', `scale(${DISPLAY_SIZE / INTERNAL_CANVAS_SIZE})`);
+	cnv.style('transform-origin', '0 0');
+	
+	// Create a wrapper div to contain the scaled canvas
+	let canvasWrapper = createDiv('');
+	canvasWrapper.style('width', DISPLAY_SIZE + 'px');
+	canvasWrapper.style('height', DISPLAY_SIZE + 'px');
+	canvasWrapper.style('overflow', 'hidden');
+	cnv.parent(canvasWrapper);
+	
 	angleMode(DEGREES);
 
 	// --- Vinyl Size Slider ---

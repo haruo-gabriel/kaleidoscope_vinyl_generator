@@ -5,4 +5,6 @@ html, body {
 
 canvas {
   display: block;
+  /* Canvas will be scaled via CSS transform in sketch.js */
+  /* Internal resolution: 4000x4000, displayed at: 900x900 using transform: scale() */
 }
