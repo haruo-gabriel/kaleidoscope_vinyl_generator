@@ -12,6 +12,9 @@ let symmetrySlider; // Variable for the new slider
 let autoPauseButton;
 let autoPaused = false;
 
+// Global canvas size (accessible anywhere)
+let w = 1000;
+
 // --- Global Color Palette ---
 let hexPalette = [
 	"#232327ff", // raisin-black
@@ -375,8 +378,6 @@ function setup() {
 		drawSpeedValueSpan.html(nf(drawSpeedSlider.value(), 0, 3));
 	});
 	// --- End Slider UI ---
-
-	let w = 600;
 
 	createCanvas(w, w);
 	angleMode(DEGREES);
