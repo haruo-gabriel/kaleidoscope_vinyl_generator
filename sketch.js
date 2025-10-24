@@ -8,6 +8,7 @@ let vinylDiscDiameter; // Diameter of the outer "vinyl" circle (set in setup)
 let mouseDrawer;
 let autoDrawer; // This will be an instance of a ProceduralDrawer subclass
 let symmetrySlider; // Variable for the new slider
+let strokeWeightSlider; // Slider to control stroke weight
 let autoPauseButton;
 let autoPaused = false;
 
@@ -86,7 +87,8 @@ class MouseDrawer {
 
 				// Use the new interpolated color instead of random
 				stroke(currentColor);
-				strokeWeight(1.5);
+				// Use the live stroke weight from the slider if available
+				strokeWeight(strokeWeightSlider ? strokeWeightSlider.value() : 1.5);
 				line(lineStartX, lineStartY, lineEndX, lineEndY);
 
 				// Draw the reflected line
@@ -281,7 +283,8 @@ class SinusoidalDrawer extends ProceduralDrawer {
 			rotate(angle);
 
 			stroke(currentColor);
-			strokeWeight(1.5);
+			// Use the live stroke weight from the slider if available
+			strokeWeight(strokeWeightSlider ? strokeWeightSlider.value() : 1.5);
 			line(this.pos.x, this.pos.y, this.prevPos.x, this.prevPos.y);
 
 			// Draw the reflected line
@@ -356,6 +359,27 @@ function setup() {
 
 	colorRateSlider.input(() => {
 		colorRateValueSpan.html(nf(colorRateSlider.value(), 0, 3));
+	});
+
+	// --- Stroke Weight Slider (controls strokeWeight for all drawers) ---
+	let swDiv = createDiv();
+	swDiv.style("margin-top", "8px");
+	swDiv.style("display", "flex");
+	swDiv.style("align-items", "center");
+
+	let swLabel = createSpan("Stroke weight: ");
+	swLabel.parent(swDiv);
+
+	// Range 0.1 to 10.0, default 1.5, step 0.1
+	strokeWeightSlider = createSlider(0.1, 10.0, 1.5, 0.1);
+	strokeWeightSlider.parent(swDiv);
+	strokeWeightSlider.style("margin", "0 10px");
+
+	let swValueSpan = createSpan(strokeWeightSlider.value());
+	swValueSpan.parent(swDiv);
+
+	strokeWeightSlider.input(() => {
+		swValueSpan.html(nf(strokeWeightSlider.value(), 0, 1));
 	});
 
 	// --- Draw Speed Slider (controls tIncrement for auto drawer) ---
