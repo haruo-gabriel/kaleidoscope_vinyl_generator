@@ -125,37 +125,51 @@ class ProceduralDrawer {
  * Class 3: Concrete Sinusoidal Drawer
  * Extends ProceduralDrawer to draw patterns using sin() and cos().
  */
-// Small helper class that represents a single sinusoidal component
-class SinusoidalWave {
-	constructor(radius = 0, freq = 1, phase = 0, phaseInc = undefined, mode = 'sin') {
-		this.radius = radius;
-		this.freq = freq;
-		this.phase = phase;
-		// If phaseInc isn't provided, choose a small random drift when constructed
-		this.phaseInc = phaseInc !== undefined ? phaseInc : random(0.0005, 0.005);
-		// mode = 'sin' or 'cos' (controls which trig function to use)
-		this.mode = mode;
-	}
-
-	value(t) {
-		if (this.mode === 'sin') return sin(t * this.freq + this.phase) * this.radius;
-		return cos(t * this.freq + this.phase) * this.radius;
-	}
-
-	incrementPhase() {
-		this.phase += this.phaseInc;
-	}
-
-	setPhaseInc(v) {
-		this.phaseInc = v;
-	}
-}
-
 class SinusoidalDrawer extends ProceduralDrawer {
+	// Internal helper class that represents a single sinusoidal component
+	static SinusoidalWave = class {
+		constructor(radius = 0, freq = 1, phase = 0, phaseInc = undefined, mode = 'sin') {
+			this.radius = radius;
+			this.freq = freq;
+			this.phase = phase;
+			// If phaseInc isn't provided, choose a small random drift when constructed
+			this.phaseInc = phaseInc !== undefined ? phaseInc : random(0.0005, 0.005);
+			// mode = 'sin' or 'cos' (controls which trig function to use)
+			this.mode = mode;
+		}
+
+		value(t) {
+			if (this.mode === 'sin') return sin(t * this.freq + this.phase) * this.radius;
+			return cos(t * this.freq + this.phase) * this.radius;
+		}
+
+		incrementPhase() {
+			this.phase += this.phaseInc;
+		}
+
+		setPhaseInc(v) {
+			this.phaseInc = v;
+		}
+	};
+
 	/**
 	 * Create a new SinusoidalDrawer.
 	 * Accepts an optional options object so it can be instantiated in one line.
-	 * Example: new SinusoidalDrawer({ tIncrement: 0.05, f1: 2.0, palette: ['#111','#222'] })
+	 * 
+	 * Options:
+	 *   - tIncrement: speed of wave progression (default 10)
+	 *   - xWaves: array of wave configs for x-axis (each has radius, freq, phase?, phaseInc?, mode?)
+	 *   - yWaves: array of wave configs for y-axis (each has radius, freq, phase?, phaseInc?, mode?)
+	 *   - palette: array of hex color strings
+	 *   - colorInterpolation, colorInterpolationSpeed: color cycling params
+	 * 
+	 * Legacy options (r1, r2, f1, f2, r3, r4, f3, f4, phases, phiIncs) still supported for backward compatibility.
+	 * 
+	 * Example: new SinusoidalDrawer({ 
+	 *   tIncrement: 0.05, 
+	 *   xWaves: [{radius: 100, freq: 1.0}, {radius: 100, freq: 2.5}],
+	 *   yWaves: [{radius: 100, freq: 1.5}, {radius: 100, freq: 3.0}]
+	 * })
 	 */
 	constructor(opts = {}) {
 		super(); // Call the parent constructor
@@ -165,62 +179,69 @@ class SinusoidalDrawer extends ProceduralDrawer {
 		this.prevPos = createVector(0, 0);
 		this.t = opts.t !== undefined ? opts.t : 0; // Our time variable
 
-		// Removed stray closing brace
-
 		// How fast to move through the waves (can be controlled by draw speed slider)
-		// Preserve the file's previous default if not provided
 		this.tIncrement = opts.tIncrement !== undefined ? opts.tIncrement : 10;
 
-		// Radii and frequencies for the sine/cosine waves.
-		// Based on drawRadius to scale with the drawing area, overridable via opts
-		this.r1 = opts.r1 !== undefined ? opts.r1 : drawRadius * 0.4;
-		this.r2 = opts.r2 !== undefined ? opts.r2 : drawRadius * 0.4;
-		this.f1 = opts.f1 !== undefined ? opts.f1 : 1.0;
-		this.f2 = opts.f2 !== undefined ? opts.f2 : 2.5;
-
-		this.r3 = opts.r3 !== undefined ? opts.r3 : drawRadius * 0.4;
-		this.r4 = opts.r4 !== undefined ? opts.r4 : drawRadius * 0.4;
-		this.f3 = opts.f3 !== undefined ? opts.f3 : 1.5;
-		this.f4 = opts.f4 !== undefined ? opts.f4 : 3.0;
-
-		// --- Phase offsets for each sinusoid so they don't all align ---
-		if (opts.phases && opts.phases.length >= 4) {
-			this.phi1 = opts.phases[0];
-			this.phi2 = opts.phases[1];
-			this.phi3 = opts.phases[2];
-			this.phi4 = opts.phases[3];
+		// --- Generalized Wave Instantiation ---
+		// Check if using new wave config arrays or legacy individual params
+		if (opts.xWaves || opts.yWaves) {
+			// New generalized approach: accept arrays of wave configs
+			this.xWaves = this._createWavesFromConfig(opts.xWaves || []);
+			this.yWaves = this._createWavesFromConfig(opts.yWaves || []);
 		} else {
-			this.phi1 = random(0, TWO_PI);
-			this.phi2 = random(0, TWO_PI);
-			this.phi3 = random(0, TWO_PI);
-			this.phi4 = random(0, TWO_PI);
+			// Legacy approach: use individual r1, r2, f1, f2, etc. parameters for backward compatibility
+			// Radii and frequencies for the sine/cosine waves.
+			// Based on drawRadius to scale with the drawing area, overridable via opts
+			const r1 = opts.r1 !== undefined ? opts.r1 : drawRadius * 0.4;
+			const r2 = opts.r2 !== undefined ? opts.r2 : drawRadius * 0.4;
+			const f1 = opts.f1 !== undefined ? opts.f1 : 1.0;
+			const f2 = opts.f2 !== undefined ? opts.f2 : 2.5;
+
+			const r3 = opts.r3 !== undefined ? opts.r3 : drawRadius * 0.4;
+			const r4 = opts.r4 !== undefined ? opts.r4 : drawRadius * 0.4;
+			const f3 = opts.f3 !== undefined ? opts.f3 : 1.5;
+			const f4 = opts.f4 !== undefined ? opts.f4 : 3.0;
+
+			// Phase offsets for each sinusoid so they don't all align
+			let phi1, phi2, phi3, phi4;
+			if (opts.phases && opts.phases.length >= 4) {
+				phi1 = opts.phases[0];
+				phi2 = opts.phases[1];
+				phi3 = opts.phases[2];
+				phi4 = opts.phases[3];
+			} else {
+				phi1 = random(0, TWO_PI);
+				phi2 = random(0, TWO_PI);
+				phi3 = random(0, TWO_PI);
+				phi4 = random(0, TWO_PI);
+			}
+
+			// Small per-wave phase increment speeds so phases slowly change over time
+			let phiInc1, phiInc2, phiInc3, phiInc4;
+			if (opts.phiIncs && opts.phiIncs.length >= 4) {
+				phiInc1 = opts.phiIncs[0];
+				phiInc2 = opts.phiIncs[1];
+				phiInc3 = opts.phiIncs[2];
+				phiInc4 = opts.phiIncs[3];
+			} else {
+				phiInc1 = opts.phiInc1 !== undefined ? opts.phiInc1 : random(0.0005, 0.005);
+				phiInc2 = opts.phiInc2 !== undefined ? opts.phiInc2 : random(0.0005, 0.005);
+				phiInc3 = opts.phiInc3 !== undefined ? opts.phiInc3 : random(0.0005, 0.005);
+				phiInc4 = opts.phiInc4 !== undefined ? opts.phiInc4 : random(0.0005, 0.005);
+			}
+
+			// Create SinusoidalWave instances for x and y components (legacy default: 2 waves per axis)
+			this.xWaves = [
+				new SinusoidalDrawer.SinusoidalWave(r1, f1, phi1, phiInc1, 'sin'),
+				new SinusoidalDrawer.SinusoidalWave(r2, f2, phi2, phiInc2, 'sin')
+			];
+			this.yWaves = [
+				new SinusoidalDrawer.SinusoidalWave(r3, f3, phi3, phiInc3, 'cos'),
+				new SinusoidalDrawer.SinusoidalWave(r4, f4, phi4, phiInc4, 'cos')
+			];
 		}
 
-		// Small per-wave phase increment speeds so phases slowly change over time
-		if (opts.phiIncs && opts.phiIncs.length >= 4) {
-			this.phiInc1 = opts.phiIncs[0];
-			this.phiInc2 = opts.phiIncs[1];
-			this.phiInc3 = opts.phiIncs[2];
-			this.phiInc4 = opts.phiIncs[3];
-		} else {
-			this.phiInc1 =
-				opts.phiInc1 !== undefined ? opts.phiInc1 : random(0.0005, 0.005);
-			this.phiInc2 =
-				opts.phiInc2 !== undefined ? opts.phiInc2 : random(0.0005, 0.005);
-			this.phiInc3 =
-				opts.phiInc3 !== undefined ? opts.phiInc3 : random(0.0005, 0.005);
-			this.phiInc4 =
-				opts.phiInc4 !== undefined ? opts.phiInc4 : random(0.0005, 0.005);
-		}
-		// --- End Sinusoidal Setup ---
-
-		// Create SinusoidalWave instances for x and y components
-		this.wave1 = new SinusoidalWave(this.r1, this.f1, this.phi1, this.phiInc1, 'sin');
-		this.wave2 = new SinusoidalWave(this.r2, this.f2, this.phi2, this.phiInc2, 'sin');
-		this.wave3 = new SinusoidalWave(this.r3, this.f3, this.phi3, this.phiInc3, 'cos');
-		this.wave4 = new SinusoidalWave(this.r4, this.f4, this.phi4, this.phiInc4, 'cos');
-
-		// --- Color Palette Logic (copied from MouseDrawer) ---
+		// --- Color Palette Logic ---
 		// Use provided palette or fall back to global hexPalette
 		let usedHexPalette =
 			opts.palette && opts.palette.length ? opts.palette : hexPalette;
@@ -234,6 +255,21 @@ class SinusoidalDrawer extends ProceduralDrawer {
 		// --- End Color Logic ---
 	}
 
+	/**
+	 * Helper method to create wave instances from a config array.
+	 * Each config object should have: { radius, freq, phase?, phaseInc?, mode? }
+	 */
+	_createWavesFromConfig(configs) {
+		return configs.map(cfg => {
+			const radius = cfg.radius !== undefined ? cfg.radius : drawRadius * 0.4;
+			const freq = cfg.freq !== undefined ? cfg.freq : 1.0;
+			const phase = cfg.phase !== undefined ? cfg.phase : random(0, TWO_PI);
+			const phaseInc = cfg.phaseInc !== undefined ? cfg.phaseInc : random(0.0005, 0.005);
+			const mode = cfg.mode !== undefined ? cfg.mode : 'sin';
+			return new SinusoidalDrawer.SinusoidalWave(radius, freq, phase, phaseInc, mode);
+		});
+	}
+
 	// Update the position based on the sum of sine/cosine waves
 	update() {
 		// If auto-draw is paused, do not advance the state
@@ -241,9 +277,16 @@ class SinusoidalDrawer extends ProceduralDrawer {
 		// Store the old position
 		this.prevPos.set(this.pos);
 
-		// Calculate new x and y using the SinusoidalWave instances
-		let x = this.wave1.value(this.t) + this.wave2.value(this.t);
-		let y = this.wave3.value(this.t) + this.wave4.value(this.t);
+		// Calculate new x and y by summing all wave contributions
+		let x = 0;
+		for (let wave of this.xWaves) {
+			x += wave.value(this.t);
+		}
+
+		let y = 0;
+		for (let wave of this.yWaves) {
+			y += wave.value(this.t);
+		}
 
 		this.pos.set(x, y);
 
@@ -251,10 +294,12 @@ class SinusoidalDrawer extends ProceduralDrawer {
 		this.t += this.tIncrement;
 
 		// Increment individual wave phases so things slowly drift
-		this.wave1.incrementPhase();
-		this.wave2.incrementPhase();
-		this.wave3.incrementPhase();
-		this.wave4.incrementPhase();
+		for (let wave of this.xWaves) {
+			wave.incrementPhase();
+		}
+		for (let wave of this.yWaves) {
+			wave.incrementPhase();
+		}
 	}
 
 	// Draw the line from the previous position to the new position
