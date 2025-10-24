@@ -3,7 +3,6 @@ let symmetry = 12;
 let angle = 360 / symmetry;
 let drawRadius; // Radius of the circular drawing area (set in setup)
 let vinylDiscDiameter; // Diameter of the outer "vinyl" circle (set in setup)
-let labelDiameter; // Diameter of the inner "label" circle (set in setup)
 
 // --- Drawer Objects ---
 let mouseDrawer;
@@ -382,13 +381,11 @@ function setup() {
 	createCanvas(w, w);
 	angleMode(DEGREES);
 
-	// Define the sizes for the vinyl and label using the new variables
+	// Use a single vinyl diameter for layout and derive drawRadius from it
 	vinylDiscDiameter = width * 0.85; // 85% of canvas width
-	labelDiameter = width * 0.7875; // 78.75% of canvas width
 
-	// Set the drawing radius (for the clipping mask) to be
-	// exactly half of the label's diameter.
-	drawRadius = labelDiameter / 2;
+	// Set the drawing radius to half the vinyl disc so wave radii scale with it
+	drawRadius = vinylDiscDiameter / 2;
 
 	// Set colorMode to HSB for the procedural drawer's smooth colors
 	// Max Hue: 360, Max Sat: 100, Max Bright: 100
@@ -480,9 +477,6 @@ function clearCanvas() {
 	noStroke();
 	circle(width / 2, height / 2, vinylDiscDiameter);
 
-	// 3. Draw the white "label" (the drawing area) using the new variable
-	fill(255);
-	circle(width / 2, height / 2, labelDiameter);
 
 	pop(); // Restore style settings
 }
