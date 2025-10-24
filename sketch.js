@@ -13,7 +13,7 @@ let autoPauseButton;
 let autoPaused = false;
 
 // Global canvas size (accessible anywhere)
-let w = 1000;
+let w = 4000;
 let vinylSlider;
 let vinylValueSpan;
 
@@ -381,8 +381,8 @@ function setup() {
 	let swLabel = createSpan("Stroke weight: ");
 	swLabel.parent(swDiv);
 
-	// Range 0.1 to 10.0, default 1.5, step 0.1
-	strokeWeightSlider = createSlider(0.1, 10.0, 3, 0.1);
+	// Range 0.1 to 10.0, default 3, step 0.1
+	strokeWeightSlider = createSlider(0.1, 30.0, 3, 0.1);
 	strokeWeightSlider.parent(swDiv);
 	strokeWeightSlider.style("margin", "0 10px");
 
