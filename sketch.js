@@ -24,7 +24,7 @@ let hexPalette = [
 	"#E5E5E3ff", // platinum
 	"#131213ff", // night
 	"#32384Dff", // space-cadet
-	"#959494ff"  // battleship-gray
+	"#959494ff", // battleship-gray
 ];
 
 // Class: Mouse-driven drawer
@@ -128,7 +128,13 @@ class ProceduralDrawer {
 class SinusoidalDrawer extends ProceduralDrawer {
 	// Internal helper class that represents a single sinusoidal component
 	static SinusoidalWave = class {
-		constructor(radius = 0, freq = 1, phase = 0, phaseInc = undefined, mode = 'sin') {
+		constructor(
+			radius = 0,
+			freq = 1,
+			phase = 0,
+			phaseInc = undefined,
+			mode = "sin"
+		) {
 			this.radius = radius;
 			this.freq = freq;
 			this.phase = phase;
@@ -139,7 +145,8 @@ class SinusoidalDrawer extends ProceduralDrawer {
 		}
 
 		value(t) {
-			if (this.mode === 'sin') return sin(t * this.freq + this.phase) * this.radius;
+			if (this.mode === "sin")
+				return sin(t * this.freq + this.phase) * this.radius;
 			return cos(t * this.freq + this.phase) * this.radius;
 		}
 
@@ -155,18 +162,18 @@ class SinusoidalDrawer extends ProceduralDrawer {
 	/**
 	 * Create a new SinusoidalDrawer.
 	 * Accepts an optional options object so it can be instantiated in one line.
-	 * 
+	 *
 	 * Options:
 	 *   - tIncrement: speed of wave progression (default 10)
 	 *   - xWaves: array of wave configs for x-axis (each has radius, freq, phase?, phaseInc?, mode?)
 	 *   - yWaves: array of wave configs for y-axis (each has radius, freq, phase?, phaseInc?, mode?)
 	 *   - palette: array of hex color strings
 	 *   - colorInterpolation, colorInterpolationSpeed: color cycling params
-	 * 
+	 *
 	 * Legacy options (r1, r2, f1, f2, r3, r4, f3, f4, phases, phiIncs) still supported for backward compatibility.
-	 * 
-	 * Example: new SinusoidalDrawer({ 
-	 *   tIncrement: 0.05, 
+	 *
+	 * Example: new SinusoidalDrawer({
+	 *   tIncrement: 0.05,
 	 *   xWaves: [{radius: 100, freq: 1.0}, {radius: 100, freq: 2.5}],
 	 *   yWaves: [{radius: 100, freq: 1.5}, {radius: 100, freq: 3.0}]
 	 * })
@@ -183,63 +190,15 @@ class SinusoidalDrawer extends ProceduralDrawer {
 		this.tIncrement = opts.tIncrement !== undefined ? opts.tIncrement : 10;
 
 		// --- Generalized Wave Instantiation ---
-		// Check if using new wave config arrays or legacy individual params
-		if (opts.xWaves || opts.yWaves) {
-			// New generalized approach: accept arrays of wave configs
-			this.xWaves = this._createWavesFromConfig(opts.xWaves || []);
-			this.yWaves = this._createWavesFromConfig(opts.yWaves || []);
-		} else {
-			// Legacy approach: use individual r1, r2, f1, f2, etc. parameters for backward compatibility
-			// Radii and frequencies for the sine/cosine waves.
-			// Based on drawRadius to scale with the drawing area, overridable via opts
-			const r1 = opts.r1 !== undefined ? opts.r1 : drawRadius * 0.4;
-			const r2 = opts.r2 !== undefined ? opts.r2 : drawRadius * 0.4;
-			const f1 = opts.f1 !== undefined ? opts.f1 : 1.0;
-			const f2 = opts.f2 !== undefined ? opts.f2 : 2.5;
-
-			const r3 = opts.r3 !== undefined ? opts.r3 : drawRadius * 0.4;
-			const r4 = opts.r4 !== undefined ? opts.r4 : drawRadius * 0.4;
-			const f3 = opts.f3 !== undefined ? opts.f3 : 1.5;
-			const f4 = opts.f4 !== undefined ? opts.f4 : 3.0;
-
-			// Phase offsets for each sinusoid so they don't all align
-			let phi1, phi2, phi3, phi4;
-			if (opts.phases && opts.phases.length >= 4) {
-				phi1 = opts.phases[0];
-				phi2 = opts.phases[1];
-				phi3 = opts.phases[2];
-				phi4 = opts.phases[3];
-			} else {
-				phi1 = random(0, TWO_PI);
-				phi2 = random(0, TWO_PI);
-				phi3 = random(0, TWO_PI);
-				phi4 = random(0, TWO_PI);
-			}
-
-			// Small per-wave phase increment speeds so phases slowly change over time
-			let phiInc1, phiInc2, phiInc3, phiInc4;
-			if (opts.phiIncs && opts.phiIncs.length >= 4) {
-				phiInc1 = opts.phiIncs[0];
-				phiInc2 = opts.phiIncs[1];
-				phiInc3 = opts.phiIncs[2];
-				phiInc4 = opts.phiIncs[3];
-			} else {
-				phiInc1 = opts.phiInc1 !== undefined ? opts.phiInc1 : random(0.0005, 0.005);
-				phiInc2 = opts.phiInc2 !== undefined ? opts.phiInc2 : random(0.0005, 0.005);
-				phiInc3 = opts.phiInc3 !== undefined ? opts.phiInc3 : random(0.0005, 0.005);
-				phiInc4 = opts.phiInc4 !== undefined ? opts.phiInc4 : random(0.0005, 0.005);
-			}
-
-			// Create SinusoidalWave instances for x and y components (legacy default: 2 waves per axis)
-			this.xWaves = [
-				new SinusoidalDrawer.SinusoidalWave(r1, f1, phi1, phiInc1, 'sin'),
-				new SinusoidalDrawer.SinusoidalWave(r2, f2, phi2, phiInc2, 'sin')
-			];
-			this.yWaves = [
-				new SinusoidalDrawer.SinusoidalWave(r3, f3, phi3, phiInc3, 'cos'),
-				new SinusoidalDrawer.SinusoidalWave(r4, f4, phi4, phiInc4, 'cos')
-			];
-		}
+		// Always use default waves
+		this.xWaves = this._createWavesFromConfig([
+			{ radius: drawRadius * 1.0, freq: 10.0, phaseInc: 0.1, mode: "sin" },
+			// { radius: drawRadius * 0.4, freq: 10.0, mode: "sin" },
+		]);
+		this.yWaves = this._createWavesFromConfig([
+			// { radius: drawRadius * 0.4, freq: 10.0, mode: "cos" },
+			// { radius: drawRadius * 0.4, freq: 10.0, mode: "cos" },
+		]);
 
 		// --- Color Palette Logic ---
 		// Use provided palette or fall back to global hexPalette
@@ -260,13 +219,20 @@ class SinusoidalDrawer extends ProceduralDrawer {
 	 * Each config object should have: { radius, freq, phase?, phaseInc?, mode? }
 	 */
 	_createWavesFromConfig(configs) {
-		return configs.map(cfg => {
+		return configs.map((cfg) => {
 			const radius = cfg.radius !== undefined ? cfg.radius : drawRadius * 0.4;
 			const freq = cfg.freq !== undefined ? cfg.freq : 1.0;
 			const phase = cfg.phase !== undefined ? cfg.phase : random(0, TWO_PI);
-			const phaseInc = cfg.phaseInc !== undefined ? cfg.phaseInc : random(0.0005, 0.005);
-			const mode = cfg.mode !== undefined ? cfg.mode : 'sin';
-			return new SinusoidalDrawer.SinusoidalWave(radius, freq, phase, phaseInc, mode);
+			const phaseInc =
+				cfg.phaseInc !== undefined ? cfg.phaseInc : random(0.0005, 0.005);
+			const mode = cfg.mode !== undefined ? cfg.mode : "sin";
+			return new SinusoidalDrawer.SinusoidalWave(
+				radius,
+				freq,
+				phase,
+				phaseInc,
+				mode
+			);
 		});
 	}
 
@@ -395,7 +361,7 @@ function setup() {
 	colorLabel.parent(colorDiv);
 
 	// Min 0, Max 0.2, default 0.01, step 0.005
-	colorRateSlider = createSlider(0, 0.9, 0.01, 0.005);
+	colorRateSlider = createSlider(0, 0.9, 0.5, 0.005);
 	colorRateSlider.parent(colorDiv);
 	colorRateSlider.style("margin", "0 10px");
 
@@ -403,7 +369,6 @@ function setup() {
 	colorRateValueSpan.parent(colorDiv);
 
 	colorRateSlider.input(() => {
-
 		colorRateValueSpan.html(nf(colorRateSlider.value(), 0, 3));
 	});
 
@@ -417,7 +382,7 @@ function setup() {
 	swLabel.parent(swDiv);
 
 	// Range 0.1 to 10.0, default 1.5, step 0.1
-	strokeWeightSlider = createSlider(0.1, 10.0, 1.5, 0.1);
+	strokeWeightSlider = createSlider(0.1, 10.0, 3, 0.1);
 	strokeWeightSlider.parent(swDiv);
 	strokeWeightSlider.style("margin", "0 10px");
 
@@ -491,7 +456,7 @@ function setup() {
 
 	// Create instances of both drawers
 	mouseDrawer = new MouseDrawer();
-	autoDrawer = new SinusoidalDrawer(); // Changed to the new concrete class
+	autoDrawer = new SinusoidalDrawer();
 
 	// Set the mouse-drawer as the default one to start
 	currentDrawer = mouseDrawer;
@@ -572,7 +537,6 @@ function clearCanvas() {
 	fill(50); // Restored this value to 50
 	noStroke();
 	circle(width / 2, height / 2, vinylDiscDiameter);
-
 
 	pop(); // Restore style settings
 }
