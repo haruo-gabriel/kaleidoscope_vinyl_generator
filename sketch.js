@@ -418,6 +418,32 @@ function setup() {
 	sliderDiv.style("display", "flex"); // Arrange items horizontally
 	sliderDiv.style("align-items", "center"); // Vertically center items
 
+	// --- Vinyl Size Slider ---
+	let vinylDiv = createDiv();
+	vinylDiv.style("margin-top", "8px");
+	vinylDiv.style("display", "flex");
+	vinylDiv.style("align-items", "center");
+
+	let vinylLabel = createSpan("Vinyl size: ");
+	vinylLabel.parent(vinylDiv);
+
+	// Range 0.5 to 1.0 (percentage of canvas), default 0.85
+	vinylSlider = createSlider(0.5, 1.0, 0.85, 0.01);
+	vinylSlider.parent(vinylDiv);
+	vinylSlider.style("margin", "0 10px");
+
+	vinylValueSpan = createSpan(nf(vinylSlider.value(), 0, 2));
+	vinylValueSpan.parent(vinylDiv);
+
+	vinylSlider.input(() => {
+		vinylValueSpan.html(nf(vinylSlider.value(), 0, 2));
+		// Update vinyl background object with new size
+		vinylBackground.setVinylSize(vinylSlider.value());
+		// Update global drawRadius for drawer compatibility
+		drawRadius = vinylBackground.getDrawRadius();
+		clearCanvas();
+	});
+
 	// Create the text label
 	let labelSpan = createSpan("Symmetry: ");
 	labelSpan.parent(sliderDiv);
@@ -521,33 +547,6 @@ function setup() {
 	cnv.parent(canvasWrapper);
 	
 	angleMode(DEGREES);
-
-	// --- Vinyl Size Slider ---
-	let vinylDiv = createDiv();
-	vinylDiv.style("margin-top", "8px");
-	vinylDiv.style("display", "flex");
-	vinylDiv.style("align-items", "center");
-
-	let vinylLabel = createSpan("Vinyl size: ");
-	vinylLabel.parent(vinylDiv);
-
-	// Range 0.5 to 1.0 (percentage of canvas), default 0.85
-	vinylSlider = createSlider(0.5, 1.0, 0.85, 0.01);
-	vinylSlider.parent(vinylDiv);
-	vinylSlider.style("margin", "0 10px");
-
-	vinylValueSpan = createSpan(nf(vinylSlider.value(), 0, 2));
-	vinylValueSpan.parent(vinylDiv);
-
-	vinylSlider.input(() => {
-		vinylValueSpan.html(nf(vinylSlider.value(), 0, 2));
-		// Update vinyl background object with new size
-		vinylBackground.setVinylSize(vinylSlider.value());
-		// Update global drawRadius for drawer compatibility
-		drawRadius = vinylBackground.getDrawRadius();
-		clearCanvas();
-	});
-
 	// Set colorMode to HSB for the procedural drawer's smooth colors
 	// Max Hue: 360, Max Sat: 100, Max Bright: 100
 	// Note: colorMode(HSB) is fine. The MouseDrawer's color()
