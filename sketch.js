@@ -32,9 +32,16 @@ let hexPalette = [
  * Encapsulates the background and vinyl disc rendering.
  */
 class VinylBackground {
-	constructor(vinylSizeRatio = 0.85, bgColor = 30, discColor = 50) {
+	constructor(vinylSizeRatio = 0.85, bgColor = undefined, discColor = 50) {
 		this.vinylSizeRatio = vinylSizeRatio; // Size as ratio of canvas width (0-1)
-		this.bgColor = bgColor; // Background color
+		// If bgColor not provided, choose a random color from global palette
+		if (bgColor !== undefined) {
+			this.bgColor = bgColor;
+		} else {
+			// pick a random hex from hexPalette and convert to p5.Color
+			let hex = random(hexPalette);
+			this.bgColor = color(hex);
+		}
 		this.discColor = discColor; // Vinyl disc color
 		this.canvasWidth = width; // Store canvas dimensions
 		this.updateSizes();
