@@ -13,7 +13,7 @@ let autoPauseButton;
 let autoPaused = false;
 
 // Global canvas size (accessible anywhere)
-let w = 4000;
+let w = 1000;
 let vinylSlider;
 let vinylValueSpan;
 
@@ -26,6 +26,62 @@ let hexPalette = [
 	"#32384Dff", // space-cadet
 	"#959494ff", // battleship-gray
 ];
+
+/**
+ * Class: VinylBackground
+ * Encapsulates the background and vinyl disc rendering.
+ */
+class VinylBackground {
+	constructor(vinylSizeRatio = 0.85, bgColor = 30, discColor = 50) {
+		this.vinylSizeRatio = vinylSizeRatio; // Size as ratio of canvas width (0-1)
+		this.bgColor = bgColor; // Background color
+		this.discColor = discColor; // Vinyl disc color
+		this.canvasWidth = width; // Store canvas dimensions
+		this.updateSizes();
+	}
+
+	// Update computed sizes based on current canvas width and ratio
+	updateSizes() {
+		this.canvasWidth = width;
+		this.vinylDiscDiameter = this.vinylSizeRatio * this.canvasWidth;
+		this.drawRadius = this.vinylDiscDiameter / 2;
+	}
+
+	// Set the vinyl size ratio (0-1) and update computed sizes
+	setVinylSize(ratio) {
+		this.vinylSizeRatio = ratio;
+		this.updateSizes();
+	}
+
+	// Get the current draw radius (for clipping mask)
+	getDrawRadius() {
+		return this.drawRadius;
+	}
+
+	// Get the vinyl disc diameter
+	getVinylDiscDiameter() {
+		return this.vinylDiscDiameter;
+	}
+
+	// Draw the background and vinyl disc
+	draw() {
+		push(); // Save current style settings
+		resetMatrix(); // Ensure we draw from the top-left (0,0)
+
+		// 1. Draw the "album cover" background
+		background(this.bgColor);
+
+		// 2. Draw the dark "vinyl" disc
+		fill(this.discColor);
+		noStroke();
+		circle(this.canvasWidth / 2, this.canvasWidth / 2, this.vinylDiscDiameter);
+
+		pop(); // Restore style settings
+	}
+}
+
+// Global singleton instance
+let vinylBackground;
 
 // Class: Mouse-driven drawer
 class MouseDrawer {
@@ -438,21 +494,24 @@ function setup() {
 
 	vinylSlider.input(() => {
 		vinylValueSpan.html(nf(vinylSlider.value(), 0, 2));
-		// Update diameters and drawRadius live
-		vinylDiscDiameter = vinylSlider.value() * width;
-		drawRadius = vinylDiscDiameter / 2;
+		// Update vinyl background object with new size
+		vinylBackground.setVinylSize(vinylSlider.value());
+		// Update global drawRadius for drawer compatibility
+		drawRadius = vinylBackground.getDrawRadius();
 		clearCanvas();
 	});
-
-	// Initialize vinyl diameter and drawRadius from slider default
-	vinylDiscDiameter = vinylSlider.value() * width;
-	drawRadius = vinylDiscDiameter / 2;
 
 	// Set colorMode to HSB for the procedural drawer's smooth colors
 	// Max Hue: 360, Max Sat: 100, Max Bright: 100
 	// Note: colorMode(HSB) is fine. The MouseDrawer's color()
 	// function will correctly parse the hex codes regardless.
 	colorMode(HSB, 360, 100, 100);
+
+	// Create vinyl background singleton with slider default
+	vinylBackground = new VinylBackground(vinylSlider.value());
+	// Initialize global drawRadius from vinyl background
+	drawRadius = vinylBackground.getDrawRadius();
+	vinylDiscDiameter = vinylBackground.getVinylDiscDiameter();
 
 	// Create instances of both drawers
 	mouseDrawer = new MouseDrawer();
@@ -480,9 +539,9 @@ function draw() {
 	// This restricts all drawing to a circle.
 	drawingContext.save(); // Save the current drawing state
 	drawingContext.beginPath();
-	// Create an arc at 0,0 (which is the center) with our radius
+	// Create an arc at 0,0 (which is the center) with our radius from vinylBackground
 	// This now perfectly matches the white label circle
-	drawingContext.arc(0, 0, drawRadius, 0, TWO_PI, true);
+	drawingContext.arc(0, 0, vinylBackground.getDrawRadius(), 0, TWO_PI, true);
 	drawingContext.clip(); // Apply the clip
 
 	// Call the draw method of whichever drawer is active
@@ -527,18 +586,8 @@ function toggleAutoPause() {
 
 // Clear the canvas and draw the "vinyl record" background
 function clearCanvas() {
-	push(); // Save current style settings
-	resetMatrix(); // Ensure we draw from the top-left (0,0)
-
-	// 1. Draw the "album cover" background
-	background(30);
-
-	// 2. Draw the dark "vinyl" disc using the new variable
-	fill(50); // Restored this value to 50
-	noStroke();
-	circle(width / 2, height / 2, vinylDiscDiameter);
-
-	pop(); // Restore style settings
+	// Use the vinyl background singleton to draw
+	vinylBackground.draw();
 }
 
 // Keep the 'c' key as a shortcut to clear
